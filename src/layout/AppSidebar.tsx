@@ -31,6 +31,18 @@ const navItems: NavItem[] = [
     name: "Create Exercise",
     path: '/createexercise',
   },
+  {
+    name: 'Exercise List',
+    path: '/exercises',
+  },
+  {
+    name: 'Form Elements',
+    path: '/form-elements'
+  },
+  {
+    name: 'Basic Tables',
+    path: '/basic-tables',
+  }
   // {
   //   icon: <CalenderIcon />,
   //   name: "Calendar",
