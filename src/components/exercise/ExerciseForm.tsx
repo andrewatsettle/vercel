@@ -99,19 +99,19 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   } = watch();
 
   const onSubmit: SubmitHandler<ExerciseInputs> = async (inputs) => {
-    const { name, summDescription, fullDescription, category, tags } = inputs;
+    const { name, summDescription, fullDescription, category, tags, mediaType } = inputs;
 
     if (data?.id) {
       await editExercise(data.id, {
-        name, summDescription, fullDescription, category, tags
+        name, summDescription, fullDescription, category, tags, mediaType
       })
     } else {
       await addExercise({
-        name, summDescription, fullDescription, category, tags
+        name, summDescription, fullDescription, category, tags, mediaType
       });
     }
 
-    router.replace('/');
+    router.replace('/exercises');
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,7 +202,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
             label="Tags"
             options={tagList}
             placeholder="Select tags"
-            defaultSelected={[]}
+            selectedOptions={tags}
             onChange={(values) => setValue('tags', values)}
           />
           <p className="sr-only">

@@ -9,7 +9,7 @@ interface Option {
 interface MultiSelectProps {
   label: string;
   options: Option[];
-  defaultSelected?: string[];
+  selectedOptions?: string[];
   onChange?: (selected: string[]) => void;
   disabled?: boolean;
   placeholder?: string;
@@ -18,13 +18,11 @@ interface MultiSelectProps {
 const MultiSelect: React.FC<MultiSelectProps> = ({
   label,
   options,
-  defaultSelected = [],
+  selectedOptions = [],
   onChange,
   disabled = false,
   placeholder = "Select options",
 }) => {
-  const [selectedOptions, setSelectedOptions] =
-    useState<string[]>(defaultSelected);
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleDropdown = () => {
@@ -37,13 +35,11 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       ? selectedOptions.filter((value) => value !== optionValue)
       : [...selectedOptions, optionValue];
 
-    setSelectedOptions(newSelectedOptions);
     if (onChange) onChange(newSelectedOptions);
   };
 
   const removeOption = (index: number, value: string) => {
     const newSelectedOptions = selectedOptions.filter((opt) => opt !== value);
-    setSelectedOptions(newSelectedOptions);
     if (onChange) onChange(newSelectedOptions);
   };
 
