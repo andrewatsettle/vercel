@@ -1,19 +1,19 @@
 'use client'
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteExercise, getExercises } from "@/firebase/firestore";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 
 export default function Excercises() {
   const router = useRouter();
-  const { data, refetch } = useQuery({
-    queryKey: ["exercises"],
-    queryFn: async () => getExercises(),
-  });
+  const [data, setData] = useState<any[]>([]);
 
-  console.log('Exercises:', data);
+  const fetchExercises = async () => {
+    const exercises = await getExercises();
+    setData(exercises);
+  }
 
   const onEdit = async (id: string) => {
     router.push(`/exercise/${id}`)
@@ -21,8 +21,12 @@ export default function Excercises() {
 
   const onDelete = async (id: string) => {
     await deleteExercise(id)
-    refetch();
+    fetchExercises();
   }
+
+  useEffect(() => {
+    fetchExercises();
+  }, [])
 
   return (
     <div className="">

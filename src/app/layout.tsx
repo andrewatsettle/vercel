@@ -6,10 +6,6 @@ import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase/firebase';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query'
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -17,8 +13,6 @@ import { ThemeProvider } from '@/context/ThemeContext';
 const outfit = Outfit({
   subsets: ["latin"],
 });
-
-const queryClient = new QueryClient();
 
 export default function RootLayout({
   children,
@@ -51,11 +45,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900`}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <SidebarProvider>{children}</SidebarProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <SidebarProvider>{children}</SidebarProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
