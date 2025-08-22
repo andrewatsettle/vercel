@@ -1,14 +1,14 @@
 
 'use client'
 
-import ExerciseForm from "@/components/exercise/ExerciseForm";
+import ExerciseForm, { ExerciseItem } from "@/components/exercise/ExerciseForm";
 import { getExercise } from "@/firebase/firestore";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Exercise() {
   const { id } = useParams();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ExerciseItem | null>(null);
 
   useEffect(() => {
     if (id) {

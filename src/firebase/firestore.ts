@@ -1,22 +1,16 @@
-import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
+import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
 import { firestore } from "./firebase";
+import { ExerciseItem } from "@/components/exercise/ExerciseForm";
 
-export const addExercise = async (data: any): Promise<void> => {
-  await addDoc(collection(firestore, "exercises"), data);
-}
+type Exercise = ExerciseItem;
 
-interface Exercise {
-  category: string
-  fullDescription: string
-  id: string
-  name: string
-  summDescription: string
-  tags: string[]
-  mediaType?: string
+export const addExercise = async (data: Exercise): Promise<void> => {
+  await addDoc(collection(firestore, "exercises"), {...data, createdAt: new Date()});
 }
 
 export const getExercises = async (): Promise<Exercise[]> => {
-  const res = await getDocs(collection(firestore, "exercises"));
+  const queryRef = query(collection(firestore, "exercises"), orderBy('createdAt', 'desc'));
+  const res = await getDocs(queryRef);
 
   if (res.empty) {
     return [];
@@ -36,7 +30,7 @@ export const getExercise = async (id: string): Promise<Exercise | null> => {
   return { ...exerciseSnap.data(), id: exerciseSnap.id } as Exercise;
 }
 
-export const editExercise = async (id: string, data: any): Promise<void> => {
+export const editExercise = async (id: string, data: Partial<Exercise>): Promise<void> => {
   const exerciseRef = doc(firestore, 'exercises', id);
   await updateDoc(exerciseRef, data);
 }

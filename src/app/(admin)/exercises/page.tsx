@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteExercise, getExercises } from "@/firebase/firestore";
+import { ExerciseItem } from "@/components/exercise/ExerciseForm";
 
 export default function Excercises() {
   const router = useRouter();
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ExerciseItem[]>([]);
 
   const fetchExercises = async () => {
     const exercises = await getExercises();
@@ -74,7 +75,6 @@ export default function Excercises() {
           </TableRow>
         </TableHeader>
 
-        {/* Table Body */}
         <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
           {data?.map((item) => (
             <TableRow key={item.id}>
@@ -91,10 +91,10 @@ export default function Excercises() {
                 {item.mediaType}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                <Button onClick={() => onEdit(item.id)}>Edit</Button>
+                <Button onClick={() => onEdit(item?.id as string)}>Edit</Button>
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                <Button onClick={() => onDelete(item.id)}>Delete</Button>
+                <Button onClick={() => onDelete(item?.id as string)}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
