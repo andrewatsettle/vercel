@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+
 import FileInput from "@/components/form/input/FileInput";
 import Input from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
@@ -10,7 +12,6 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
 import { addExercise, editExercise } from "@/firebase/firestore";
-import { useRouter } from "next/navigation";
 import { uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
@@ -22,7 +23,13 @@ type ExerciseInputs = {
   name: string
   summDescription: string
   fullDescription: string
+  imageType: 'Single' | 'Multiple'
   image: File | string | null
+  multipleImages: {
+    vertical: File | string | null
+    horizontal: File | string | null
+    fullscreen: File | string | null
+  }
   category: string
   tags: string[]
   mediaType: string
@@ -30,11 +37,16 @@ type ExerciseInputs = {
   videoFile: File | string | null
   slideshowFiles: { image?: File | string | null, caption?: string }[]
   breathe: {
-    inhale: number
-    hold: number
-    exhale: number
+    inhale: number | string
+    hold: number | string
+    exhale: number | string
   }
 }
+
+export const imageTypes = [
+  { value: "Single", label: "Single" },
+  { value: "Multiple", label: "Multiple" },
+];
 
 export const categories = [
   { value: "meditation", label: "Meditation" },
@@ -61,16 +73,22 @@ export interface ExerciseItem {
   fullDescription: string
   category: string
   tags: string[]
+  imageType: 'Single' | 'Multiple'
   mediaType: string
   image?: string | null
+  multipleImages?: {
+    vertical?: string | null
+    horizontal?: string | null
+    fullscreen?: string | null
+  }
   audioFile?: string | null
   videoFile?: string | null
   slideshowFiles?: { image: string, caption: string }[]
   visible: boolean
   breathe: {
-    inhale: number
-    hold: number
-    exhale: number
+    inhale: number | string
+    hold: number | string
+    exhale: number | string
   }
 }
 
@@ -95,7 +113,13 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       name: '',
       summDescription: '',
       fullDescription: '',
+      imageType: 'Single',
       image: null,
+      multipleImages: {
+        vertical: null,
+        horizontal: null,
+        fullscreen: null,
+      },
       category: '',
       tags: [],
       mediaType: '',
@@ -103,9 +127,9 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       videoFile: null,
       slideshowFiles: [],
       breathe: {
-        exhale: 0,
-        hold: 0,
-        inhale: 0
+        exhale: '',
+        hold: '',
+        inhale: ''
       }
     },
   });
@@ -120,7 +144,12 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   register('name', { required: true });
   register('summDescription', { required: true });
   register('fullDescription', { required: true });
-  register('image', { required: true });
+  register('imageType', { required: true });
+  register('image', {
+    validate: {
+      required: () => imageType === 'Multiple' ? true : imageType === 'Single' && image !== null,
+    }
+  });
   register('category', { required: true });
   register('mediaType', {
     validate: {
@@ -142,19 +171,34 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       required: () => mediaType !== 'slideshow' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
     }
   });
+  register('multipleImages.horizontal', {
+    validate: {
+      required: () => imageType === 'Single' ? true : imageType === 'Multiple' && multipleImages.horizontal !== null,
+    }
+  })
+  register('multipleImages.vertical', {
+    validate: {
+      required: () => imageType === 'Single' ? true : imageType === 'Multiple' && multipleImages.vertical !== null,
+    }
+  })
+  register('multipleImages.fullscreen', {
+    validate: {
+      required: () => imageType === 'Single' ? true : imageType === 'Multiple' && multipleImages.fullscreen !== null,
+    }
+  })
   register('breathe.inhale', {
     validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.inhale > 0,
+      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.inhale,
     }
   })
   register('breathe.hold', {
     validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.hold > 0,
+      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.hold,
     }
   })
   register('breathe.exhale', {
     validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.exhale > 0,
+      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.exhale,
     }
   })
 
@@ -168,8 +212,16 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setValue('category', data.category);
       setValue('tags', data.tags);
       setValue('mediaType', data.mediaType);
+      setValue('imageType', data.imageType);
       if (data.image) {
         setValue('image', data.image);
+      }
+      if (data.multipleImages) {
+        setValue('multipleImages', {
+          vertical: data.multipleImages?.vertical ?? null,
+          horizontal: data.multipleImages?.horizontal ?? null,
+          fullscreen: data.multipleImages?.fullscreen ?? null,
+        });
       }
       if (data.audioFile) {
         setValue('audioFile', data.audioFile);
@@ -195,6 +247,8 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     image,
     category,
     tags,
+    imageType,
+    multipleImages,
     mediaType,
     audioFile,
     videoFile,
@@ -206,75 +260,75 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     try {
       setIsLoading(true);
       const {
-        visible,
-        name,
-        summDescription,
-        fullDescription,
-        category,
-        tags,
-        mediaType,
-        audioFile,
         image,
-        slideshowFiles,
+        audioFile,
         videoFile,
-        breathe,
+        slideshowFiles,
+        multipleImages: { vertical, fullscreen, horizontal },
+        ...rest
       } = inputs;
 
-      let uploadedImage: string | null = null;
-      if (image) {
+      let uploadedImage: File | string | null = image;
+      if (image && image instanceof File) {
         uploadedImage = await uploadFile(image as File);
       }
 
-      let uploadedAudio: string | null = null;
-      if (audioFile && mediaType === 'audio') {
+      const uploadedMultipleImages: { [key: string]: File | string | null } = {
+        vertical,
+        horizontal,
+        fullscreen,
+      };
+
+      if (vertical instanceof File && imageType === 'Multiple') {
+        uploadedMultipleImages.vertical = await uploadFile(vertical as File)
+      }
+
+      if (horizontal instanceof File && imageType === 'Multiple') {
+        uploadedMultipleImages.horizontal = await uploadFile(horizontal as File)
+      }
+
+      if (fullscreen instanceof File && imageType === 'Multiple') {
+        uploadedMultipleImages.fullscreen = await uploadFile(fullscreen as File)
+      }
+
+      let uploadedAudio: File | string | null = audioFile;
+      if (audioFile instanceof File && mediaType === 'audio') {
         uploadedAudio = await uploadFile(audioFile as File);
       }
 
-      let uploadedVideo: string | null = null;
-      if (videoFile && mediaType === 'video') {
+      let uploadedVideo: File | string | null = videoFile;
+      if (videoFile instanceof File && mediaType === 'video') {
         uploadedVideo = await uploadFile(videoFile as File);
       }
 
       let uploadedSlides: { image: string, caption: string }[] = [];
       if (slideshowFiles && mediaType === 'slideshow') {
         uploadedSlides = await Promise.all(slideshowFiles.map(async (slide) => {
-          if (slide.image) {
+          if (slide.image instanceof File) {
             const uploadedImage = await uploadFile(slide.image as File);
             return { image: uploadedImage, caption: slide.caption || '' };
           }
-          return { image: '', caption: slide.caption || '' };
+          return { image: slide.image ?? '', caption: slide.caption ?? ''};
         }));
       }
 
       if (data?.id) {
         await editExercise(data.id, {
-          visible,
-          name,
-          summDescription,
-          fullDescription,
-          category,
-          tags,
-          mediaType,
-          image: uploadedImage,
-          audioFile: uploadedAudio,
-          videoFile: uploadedVideo,
+          image: uploadedImage as string,
+          audioFile: uploadedAudio as string,
+          videoFile: uploadedVideo as string,
           slideshowFiles: uploadedSlides,
-          breathe,
+          multipleImages: uploadedMultipleImages,
+          ...rest,
         })
       } else {
         await addExercise({
-          visible,
-          name,
-          summDescription,
-          fullDescription,
-          category,
-          tags,
-          mediaType,
-          image: uploadedImage,
-          audioFile: uploadedAudio,
-          videoFile: uploadedVideo,
+          image: uploadedImage as string,
+          audioFile: uploadedAudio as string,
+          videoFile: uploadedVideo as string,
           slideshowFiles: uploadedSlides,
-          breathe,
+          multipleImages: uploadedMultipleImages,
+          ...rest,
         });
       }
 
@@ -298,6 +352,13 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     }
   };
 
+  const handleMultipleImageChange = (key: keyof ExerciseInputs['multipleImages']) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setValue(`multipleImages.${key}`, file);
+    }
+  }
+
   const handleChangeSlideImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event?.target?.files;
 
@@ -311,6 +372,58 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   const isMultimediaTypeAvailable = useMemo(() => {
     return category === 'meditation' || category === 'move';
   }, [category]);
+
+  const imageUploadContent = useMemo(() => {
+    if (imageType === 'Single') {
+      return (
+        <div>
+          <Label>Image</Label>
+          <ImagePreview image={image} onRemove={() => setValue('image', null)} />
+          {!image && (
+            <FileInput error={!!errors.image?.type} accept="image/png, image/jpeg" onChange={handleImageChange} />
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div>
+          <Label>Vertical</Label>
+          <ImagePreview image={multipleImages.vertical} onRemove={() => setValue('multipleImages.vertical', null)} />
+          {!multipleImages.vertical && (
+            <FileInput error={!!errors.multipleImages?.vertical?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('vertical')} />
+          )}
+        </div>
+        <div>
+          <Label>Horizontal</Label>
+          <ImagePreview image={multipleImages.horizontal} onRemove={() => setValue('multipleImages.horizontal', null)} />
+          {!multipleImages.horizontal && (
+            <FileInput error={!!errors.multipleImages?.horizontal?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('horizontal')} />
+          )}
+        </div>
+        <div>
+          <Label>Full Screen</Label>
+          <ImagePreview image={multipleImages.fullscreen} onRemove={() => setValue('multipleImages.fullscreen', null)} />
+          {!multipleImages.fullscreen && (
+            <FileInput error={!!errors.multipleImages?.fullscreen?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('fullscreen')} />
+          )}
+        </div>
+      </div>
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    image,
+    errors.image,
+    imageType,
+    multipleImages.vertical,
+    multipleImages.horizontal,
+    multipleImages.fullscreen,
+    errors.multipleImages,
+    errors.multipleImages?.vertical,
+    errors.multipleImages?.horizontal,
+    errors.multipleImages?.fullscreen
+  ]);
 
   const mediaInputsContent = useMemo(() => {
     if (mediaType === 'audio') {
@@ -353,7 +466,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
             ))}
           </div>
           {slideshowFiles?.length < 5 && (
-            <FileInput accept="image/*" max={5} multiple onChange={handleChangeSlideImage} />
+            <FileInput accept="image/*" error={!!errors.slideshowFiles?.root} max={5} multiple onChange={handleChangeSlideImage} />
           )}
         </div>
       );
@@ -368,15 +481,39 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       return <div className="flex flex-col gap-2">
         <div>
           <Label>Inhale</Label>
-          <Input error={!!errors.breathe?.inhale?.type} type="number" value={breathe.inhale} onChange={e => setValue('breathe.inhale', Number(e.target.value))} />
+          <Input error={!!errors.breathe?.inhale?.type} value={breathe.inhale} onChange={e => {
+            const val = e.target.value;
+            const num = Number(val);
+            if (val === '') return setValue('breathe.inhale', '');
+            if (/^\d*\.?\d*$/.test(val)) {
+              const validNum = num < 0 ? 0 : num > 100 ? 100 : num;
+              setValue('breathe.inhale', validNum);
+            }
+          }} />
         </div>
         <div>
           <Label>Hold</Label>
-          <Input error={!!errors.breathe?.hold?.type} type="number" value={breathe.hold} onChange={e => setValue('breathe.hold', Number(e.target.value))} />
+          <Input error={!!errors.breathe?.hold?.type} value={breathe.hold} onChange={e => {
+            const val = e.target.value;
+            const num = Number(val);
+            if (val === '') return setValue('breathe.hold', '');
+            if (/^\d*\.?\d*$/.test(val)) {
+              const validNum = num < 0 ? 0 : num > 100 ? 100 : num;
+              setValue('breathe.hold', validNum);
+            }
+          }} />
         </div>
         <div>
           <Label>Exhale</Label>
-          <Input error={!!errors.breathe?.exhale?.type} type="number" value={breathe.exhale} onChange={e => setValue('breathe.exhale', Number(e.target.value))} />
+          <Input error={!!errors.breathe?.exhale?.type} value={breathe.exhale} onChange={e => {
+            const val = e.target.value;
+            const num = Number(val);
+            if (val === '') return setValue('breathe.exhale', '');
+            if (/^\d*\.?\d*$/.test(val)) {
+              const validNum = num < 0 ? 0 : num > 100 ? 100 : num;
+              setValue('breathe.exhale', validNum);
+            }
+          }} />
         </div>
       </div>
     }
@@ -403,12 +540,22 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         <TextArea rows={3} error={!!errors.fullDescription?.type} value={fullDescription} onChange={val => setValue('fullDescription', val)} />
       </div>
       <div>
-        <Label>Image</Label>
-        <ImagePreview image={image} onRemove={() => setValue('image', null)} />
-        {!image && (
-          <FileInput error={!!errors.image?.type} accept="image/png, image/jpeg" onChange={handleImageChange} />
-        )}
+        <Label>Image type</Label>
+        <div className="relative">
+          <Select
+            options={imageTypes}
+            value={imageType}
+            error={!!errors.imageType?.type}
+            placeholder="Select image type"
+            onChange={(val) => setValue('imageType', val as ExerciseItem['imageType'])}
+            className="dark:bg-dark-900"
+          />
+          <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+            <ChevronDownIcon />
+          </span>
+        </div>
       </div>
+      {imageUploadContent}
       <div>
         <Label>Category</Label>
         <div className="relative">
@@ -441,18 +588,21 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       </div>
       {isMultimediaTypeAvailable && (
         <div className="flex flex-col gap-2">
-          <div className="relative">
-            <Select
-              options={mediaTypes}
-              value={mediaType}
-              error={!!errors.mediaType?.type}
-              placeholder="Select media type"
-              onChange={(val) => setValue('mediaType', val)}
-              className="dark:bg-dark-900"
-            />
-            <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-              <ChevronDownIcon />
-            </span>
+          <div>
+            <Label>Multimedia Type</Label>
+            <div className="relative">
+              <Select
+                options={mediaTypes}
+                value={mediaType}
+                error={!!errors.mediaType?.type}
+                placeholder="Select media type"
+                onChange={(val) => setValue('mediaType', val)}
+                className="dark:bg-dark-900"
+              />
+              <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                <ChevronDownIcon />
+              </span>
+            </div>
           </div>
           {mediaInputsContent}
         </div>
