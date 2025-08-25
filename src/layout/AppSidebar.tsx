@@ -1,22 +1,14 @@
 "use client";
 import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
-  CalenderIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
   PieChartIcon,
   PlugInIcon,
-  TableIcon,
-  UserCircleIcon,
-
 } from "../icons/index";
 
 type NavItem = {
@@ -31,6 +23,18 @@ const navItems: NavItem[] = [
     name: "Create Exercise",
     path: '/createexercise',
   },
+  {
+    name: 'Exercise List',
+    path: '/exercises',
+  },
+  // {
+  //   name: 'Form Elements',
+  //   path: '/form-elements'
+  // },
+  // {
+  //   name: 'Basic Tables',
+  //   path: '/basic-tables',
+  // }
   // {
   //   icon: <CalenderIcon />,
   //   name: "Calendar",
