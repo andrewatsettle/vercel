@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteExercise, getExercises } from "@/firebase/firestore";
-import { ExerciseItem } from "@/components/exercise/ExerciseForm";
+import { categories, ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
 
 export default function Excercises() {
   const router = useRouter();
@@ -23,6 +23,11 @@ export default function Excercises() {
   const onDelete = async (id: string) => {
     await deleteExercise(id)
     fetchExercises();
+  }
+
+  const getLabel = (data: { label: string; value: string }[], value: string) => {
+    const target = data.find(item => item.value === value);
+    return target ? target.label : value;
   }
 
   useEffect(() => {
@@ -85,10 +90,10 @@ export default function Excercises() {
                 {item.summDescription}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                {item.category}
+                {getLabel(categories, item.category)}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                {item.mediaType}
+                {getLabel(mediaTypes, item.mediaType)}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                 <Button onClick={() => onEdit(item?.id as string)}>Edit</Button>

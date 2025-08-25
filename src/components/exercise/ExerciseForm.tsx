@@ -29,9 +29,14 @@ type ExerciseInputs = {
   audioFile: File | string | null
   videoFile: File | string | null
   slideshowFiles: { image?: File | string | null, caption?: string }[]
+  breathe: {
+    inhale: number
+    hold: number
+    exhale: number
+  }
 }
 
-const categories = [
+export const categories = [
   { value: "meditation", label: "Meditation" },
   { value: "breathe", label: "Breathe" },
   { value: "move", label: "Move" },
@@ -43,7 +48,7 @@ const tagList = [
   { value: "vagusNerveActivation", text: "Vagus Nerve Activation", selected: false },
 ]
 
-const mediaTypes = [
+export const mediaTypes = [
   { value: "audio", label: "Audio" },
   { value: "video", label: "Video" },
   { value: "slideshow", label: "Slideshow" },
@@ -62,6 +67,11 @@ export interface ExerciseItem {
   videoFile?: string | null
   slideshowFiles?: { image: string, caption: string }[]
   visible: boolean
+  breathe: {
+    inhale: number
+    hold: number
+    exhale: number
+  }
 }
 
 export interface ExerciseFormProps {
@@ -92,6 +102,11 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       audioFile: null,
       videoFile: null,
       slideshowFiles: [],
+      breathe: {
+        exhale: 0,
+        hold: 0,
+        inhale: 0
+      }
     },
   });
 
@@ -107,7 +122,11 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   register('fullDescription', { required: true });
   register('image', { required: true });
   register('category', { required: true });
-  register('mediaType', { required: true });
+  register('mediaType', {
+    validate: {
+      required: () => category === 'breathe' ? true : mediaType !== '',
+    }
+  });
   register('audioFile', {
     validate: {
       required: () => mediaType !== 'audio' ? true : mediaType === 'audio' && audioFile !== null
@@ -123,6 +142,21 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       required: () => mediaType !== 'slideshow' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
     }
   });
+  register('breathe.inhale', {
+    validate: {
+      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.inhale > 0,
+    }
+  })
+  register('breathe.hold', {
+    validate: {
+      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.hold > 0,
+    }
+  })
+  register('breathe.exhale', {
+    validate: {
+      required: () => category !== 'breathe' ? true : category === 'breathe' && breathe.exhale > 0,
+    }
+  })
 
 
   useEffect(() => {
@@ -146,8 +180,11 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       if (data.slideshowFiles) {
         setValue('slideshowFiles', data.slideshowFiles);
       }
+      if (data.breathe) {
+        setValue('breathe', data.breathe);
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const {
@@ -162,6 +199,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     audioFile,
     videoFile,
     slideshowFiles,
+    breathe,
   } = watch();
 
   const onSubmit: SubmitHandler<ExerciseInputs> = async (inputs) => {
@@ -179,6 +217,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         image,
         slideshowFiles,
         videoFile,
+        breathe,
       } = inputs;
 
       let uploadedImage: string | null = null;
@@ -220,6 +259,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           audioFile: uploadedAudio,
           videoFile: uploadedVideo,
           slideshowFiles: uploadedSlides,
+          breathe,
         })
       } else {
         await addExercise({
@@ -234,6 +274,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           audioFile: uploadedAudio,
           videoFile: uploadedVideo,
           slideshowFiles: uploadedSlides,
+          breathe,
         });
       }
 
@@ -319,8 +360,29 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     }
 
     return null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaType, audioFile, videoFile, slideshowFiles, errors.audioFile, errors.videoFile, errors.slideshowFiles]);
+
+  const breatheInputsContent = useMemo(() => {
+    if (category === 'breathe') {
+      return <div className="flex flex-col gap-2">
+        <div>
+          <Label>Inhale</Label>
+          <Input error={!!errors.breathe?.inhale?.type} type="number" value={breathe.inhale} onChange={e => setValue('breathe.inhale', Number(e.target.value))} />
+        </div>
+        <div>
+          <Label>Hold</Label>
+          <Input error={!!errors.breathe?.hold?.type} type="number" value={breathe.hold} onChange={e => setValue('breathe.hold', Number(e.target.value))} />
+        </div>
+        <div>
+          <Label>Exhale</Label>
+          <Input error={!!errors.breathe?.exhale?.type} type="number" value={breathe.exhale} onChange={e => setValue('breathe.exhale', Number(e.target.value))} />
+        </div>
+      </div>
+    }
+    return null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, breathe.inhale, breathe.hold, breathe.exhale, errors.breathe, errors.breathe?.inhale, errors.breathe?.hold, errors.breathe?.exhale]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-1/3 gap-4">
@@ -395,9 +457,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           {mediaInputsContent}
         </div>
       )}
-      <div>
-
-      </div>
+      {breatheInputsContent}
       <Button disabled={isLoading}>Submit</Button>
     </form>
   )
