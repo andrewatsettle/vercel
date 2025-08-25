@@ -1,20 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Button from "@/components/ui/button/Button";
 import { auth } from "@/firebase/firebase";
 import { signOut } from "firebase/auth";
 
 const AppHeader: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(auth.currentUser !== null);
-  }, []);
-
   const handleLogout = () => {
-    if (isLoggedIn) {
-      signOut(auth)
-    }
+    signOut(auth)
   }
 
   return (
