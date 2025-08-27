@@ -9,6 +9,7 @@ import { deleteExercise, getExercises } from "@/firebase/firestore";
 import { categories, ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
+import { deleteFolder } from "@/firebase/storage";
 
 export default function Excercises() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function Excercises() {
   const confirmDelete = async () => {
     if (deletePostId) {
       await deleteExercise(deletePostId);
+      await deleteFolder(deletePostId);
       await fetchExercises();
       setDeletePostId(null);
       closeModal();
@@ -163,7 +165,7 @@ export default function Excercises() {
         className="max-w-[600px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">
-          Delete post
+          Delete exercise
         </h4>
         <div className="flex items-center justify-end w-full gap-3 mt-8">
           <Button size="sm" variant="outline" onClick={closeModal}>

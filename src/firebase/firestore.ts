@@ -4,8 +4,9 @@ import { ExerciseItem } from "@/components/exercise/ExerciseForm";
 
 type Exercise = ExerciseItem;
 
-export const addExercise = async (data: Exercise): Promise<void> => {
-  await addDoc(collection(firestore, "exercises"), {...data, createdAt: new Date()});
+export const addExercise = async (id: string, data: Exercise): Promise<void> => {
+  const exerciseRef = doc(firestore, 'exercises', id);
+  await updateDoc(exerciseRef, {...data, createdAt: new Date()});
 }
 
 export const getExercises = async (): Promise<Exercise[]> => {
