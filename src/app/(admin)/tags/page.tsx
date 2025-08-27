@@ -43,11 +43,13 @@ export default function Tags() {
   }
 
   const handleAddTag = async () => {
-    setIsLoadingAdd(true);
-    await addTag(tagInput);
-    await fetchTags();
-    setTagInput('');
-    setIsLoadingAdd(false);
+    if (tagInput.trim().length > 0) {
+      setIsLoadingAdd(true);
+      await addTag(tagInput);
+      await fetchTags();
+      setTagInput('');
+      setIsLoadingAdd(false);
+    }
   }
 
   const enableEditMode = (id: string, currentName: string) => {
