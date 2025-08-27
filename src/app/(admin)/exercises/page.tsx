@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteExercise, getExercises } from "@/firebase/firestore";
 import { categories, ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
+import { useModal } from "@/hooks/useModal";
+import { Modal } from "@/components/ui/modal";
 
 export default function Excercises() {
   const router = useRouter();
+  const { isOpen, openModal, closeModal } = useModal();
+
   const [data, setData] = useState<ExerciseItem[]>([]);
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
 
   const fetchExercises = async () => {
     const exercises = await getExercises();
@@ -21,8 +27,17 @@ export default function Excercises() {
   }
 
   const onDelete = async (id: string) => {
-    await deleteExercise(id)
-    fetchExercises();
+    setDeletePostId(id);
+    openModal();
+  }
+
+  const confirmDelete = async () => {
+    if (deletePostId) {
+      await deleteExercise(deletePostId);
+      await fetchExercises();
+      setDeletePostId(null);
+      closeModal();
+    }
   }
 
   const getLabel = (data: { label: string; value: string }[], value: string) => {
@@ -69,6 +84,30 @@ export default function Excercises() {
               isHeader
               className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
             >
+              Views
+            </TableCell>
+            <TableCell
+              isHeader
+              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+            >
+              Starts
+            </TableCell>
+            <TableCell
+              isHeader
+              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+            >
+              Completions
+            </TableCell>
+            <TableCell
+              isHeader
+              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+            >
+              Favorites
+            </TableCell>
+            <TableCell
+              isHeader
+              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+            >
               Edit
             </TableCell>
             <TableCell
@@ -93,7 +132,19 @@ export default function Excercises() {
                 {getLabel(categories, item.category)}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                {getLabel(mediaTypes, item.mediaType)}
+                {getLabel(mediaTypes, item.category === 'meditation' || item.category === 'move' ? item.mediaType : '')}
+              </TableCell>
+              <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
+                0
+              </TableCell>
+              <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
+                0
+              </TableCell>
+              <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
+                0
+              </TableCell>
+              <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
+                0
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                 <Button onClick={() => onEdit(item?.id as string)}>Edit</Button>
@@ -105,6 +156,24 @@ export default function Excercises() {
           ))}
         </TableBody>
       </Table>
+
+      <Modal
+        isOpen={isOpen}
+        onClose={closeModal}
+        className="max-w-[600px] p-5 lg:p-10"
+      >
+        <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">
+          Delete post
+        </h4>
+        <div className="flex items-center justify-end w-full gap-3 mt-8">
+          <Button size="sm" variant="outline" onClick={closeModal}>
+            Close
+          </Button>
+          <Button size="sm" onClick={confirmDelete} className="bg-red-500">
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 };
