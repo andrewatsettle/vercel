@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 import FileInput from "@/components/form/input/FileInput";
 import Input from "@/components/form/input/InputField";
@@ -17,6 +18,10 @@ import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
 import VideoPreview from "./VideoPreview";
 import Checkbox from "../form/input/Checkbox";
+import { addDoc, collection } from "firebase/firestore";
+import { firestore } from "@/firebase/firebase";
+import { useModal } from "@/hooks/useModal";
+import { Modal } from "../ui/modal";
 
 type ExerciseInputs = {
   visible: boolean
@@ -26,9 +31,9 @@ type ExerciseInputs = {
   imageType: 'Single' | 'Multiple'
   image: File | string | null
   multipleImages: {
-    vertical: File | string | null
-    horizontal: File | string | null
-    fullscreen: File | string | null
+    vertical?: File | string | null
+    horizontal?: File | string | null
+    fullscreen?: File | string | null
   }
   category: string
   tags: string[]
@@ -69,14 +74,14 @@ export interface ExerciseItem {
   tags: string[]
   imageType: 'Single' | 'Multiple'
   mediaType: string
-  image?: string | null
-  multipleImages?: {
-    vertical?: string | null
-    horizontal?: string | null
-    fullscreen?: string | null
+  image: string | null
+  multipleImages: {
+    vertical: string | null
+    horizontal: string | null
+    fullscreen: string | null
   }
-  audioFile?: string | null
-  videoFile?: string | null
+  audioFile: string | null
+  videoFile: string | null
   slideshowFiles?: { id?: string; image: string, caption: string }[]
   visible: boolean
   breathe: {
@@ -92,15 +97,17 @@ export interface ExerciseFormProps {
 
 export default function ExerciseForm({ data }: ExerciseFormProps) {
   const router = useRouter();
+  const { isOpen, openModal, closeModal } = useModal();
   const [isLoading, setIsLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<File | string | null>(null);
   const [tagList, setTagList] = useState<{ value: string; text: string; selected: boolean }[]>([]);
 
   const {
     handleSubmit,
     watch,
     setValue,
-    control,
     register,
+    control,
     formState: { errors },
     setError,
   } = useForm<ExerciseInputs>({
@@ -129,12 +136,6 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       }
     },
   });
-
-  const {
-    remove: removeSlideImage,
-    append: appendSlideImage,
-    update: updateSlideImage,
-  } = useFieldArray({ control, name: 'slideshowFiles' });
 
   register('visible');
   register('name', { required: true });
@@ -198,6 +199,11 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     }
   })
 
+  const {
+    remove: removeSlideImage,
+    append: appendSlideImage,
+    update: updateSlideImage,
+  } = useFieldArray({ control, name: 'slideshowFiles' });
 
   useEffect(() => {
     getTags().then(tags => {
@@ -289,44 +295,51 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         }
       }
 
-      let uploadedImage: File | string | null = image;
-      if (image && image instanceof File) {
-        uploadedImage = await uploadFile(image as File);
+      let exerciseId = data?.id;
+
+      if (exerciseId === undefined) {
+        const docRef = await addDoc(collection(firestore, 'exercises'), {});
+        exerciseId = docRef.id;
       }
 
-      const uploadedMultipleImages: { [key: string]: File | string | null } = {
-        vertical,
-        horizontal,
-        fullscreen,
+      let uploadedImage: File | string | null = image;
+      if (image && image instanceof File) {
+        uploadedImage = await uploadFile(exerciseId, image as File);
+      }
+
+      const uploadedMultipleImages = {
+        vertical: vertical,
+        horizontal: horizontal,
+        fullscreen: fullscreen,
       };
 
       if (vertical instanceof File && imageType === 'Multiple') {
-        uploadedMultipleImages.vertical = await uploadFile(vertical as File)
+        uploadedMultipleImages.vertical = await uploadFile(exerciseId, vertical as File)
       }
 
       if (horizontal instanceof File && imageType === 'Multiple') {
-        uploadedMultipleImages.horizontal = await uploadFile(horizontal as File)
+        uploadedMultipleImages.horizontal = await uploadFile(exerciseId, horizontal as File)
       }
 
       if (fullscreen instanceof File && imageType === 'Multiple') {
-        uploadedMultipleImages.fullscreen = await uploadFile(fullscreen as File)
+        uploadedMultipleImages.fullscreen = await uploadFile(exerciseId, fullscreen as File)
       }
 
       let uploadedAudio: File | string | null = audioFile;
       if (audioFile instanceof File && mediaType === 'audio') {
-        uploadedAudio = await uploadFile(audioFile as File);
+        uploadedAudio = await uploadFile(exerciseId, audioFile as File);
       }
 
       let uploadedVideo: File | string | null = videoFile;
       if (videoFile instanceof File && mediaType === 'video') {
-        uploadedVideo = await uploadFile(videoFile as File);
+        uploadedVideo = await uploadFile(exerciseId, videoFile as File);
       }
 
       let uploadedSlides: { image: string, caption: string }[] = [];
       if (slideshowFiles && mediaType === 'slideshow') {
         uploadedSlides = await Promise.all(slideshowFiles.map(async (slide) => {
           if (slide.image instanceof File) {
-            const uploadedImage = await uploadFile(slide.image as File);
+            const uploadedImage = await uploadFile(exerciseId, slide.image as File);
             return { image: uploadedImage, caption: slide.caption || '' };
           }
           return { image: slide.image ?? '', caption: slide.caption ?? '' };
@@ -339,16 +352,16 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           audioFile: uploadedAudio as string,
           videoFile: uploadedVideo as string,
           slideshowFiles: uploadedSlides,
-          multipleImages: uploadedMultipleImages,
+          multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
         })
       } else {
-        await addExercise({
+        await addExercise(exerciseId, {
           image: uploadedImage as string,
           audioFile: uploadedAudio as string,
           videoFile: uploadedVideo as string,
           slideshowFiles: uploadedSlides,
-          multipleImages: uploadedMultipleImages,
+          multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
         });
       }
@@ -384,11 +397,18 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     const files = event?.target?.files;
 
     if (files) {
-      Array.from(files).forEach((file) => {
+      Array.from(files).slice(0, 5 - slideshowFiles.length).forEach((file) => {
         appendSlideImage({ image: file, caption: '' });
       })
     }
   };
+
+  const handleImagePreview = (image?: File | string | null) => {
+    if (image) {
+      setPreviewImage(image);
+      openModal();
+    }
+  }
 
   const isMultimediaTypeAvailable = useMemo(() => {
     return category === 'meditation' || category === 'move';
@@ -399,7 +419,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       return (
         <div>
           <Label>Image</Label>
-          <ImagePreview image={image} onRemove={() => setValue('image', null)} />
+          <ImagePreview image={image} onClick={() => handleImagePreview(image)} onRemove={() => setValue('image', null)} />
           {!image && (
             <FileInput error={!!errors.image?.type} accept="image/png, image/jpeg" onChange={handleImageChange} />
           )}
@@ -411,21 +431,21 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       <div className="flex flex-col gap-2">
         <div>
           <Label>Vertical</Label>
-          <ImagePreview image={multipleImages.vertical} onRemove={() => setValue('multipleImages.vertical', null)} />
+          <ImagePreview image={multipleImages.vertical} onClick={() => handleImagePreview(multipleImages.vertical)} onRemove={() => setValue('multipleImages.vertical', null)} />
           {!multipleImages.vertical && (
             <FileInput error={!!errors.multipleImages?.vertical?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('vertical')} />
           )}
         </div>
         <div>
           <Label>Horizontal</Label>
-          <ImagePreview image={multipleImages.horizontal} onRemove={() => setValue('multipleImages.horizontal', null)} />
+          <ImagePreview image={multipleImages.horizontal} onClick={() => handleImagePreview(multipleImages.horizontal)} onRemove={() => setValue('multipleImages.horizontal', null)} />
           {!multipleImages.horizontal && (
             <FileInput error={!!errors.multipleImages?.horizontal?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('horizontal')} />
           )}
         </div>
         <div>
           <Label>Full Screen</Label>
-          <ImagePreview image={multipleImages.fullscreen} onRemove={() => setValue('multipleImages.fullscreen', null)} />
+          <ImagePreview image={multipleImages.fullscreen} onClick={() => handleImagePreview(multipleImages.fullscreen)} onRemove={() => setValue('multipleImages.fullscreen', null)} />
           {!multipleImages.fullscreen && (
             <FileInput error={!!errors.multipleImages?.fullscreen?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('fullscreen')} />
           )}
@@ -474,20 +494,20 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     if (mediaType === 'slideshow') {
       return (
         <div>
-          <Label>Slideshow Files</Label>
-          <div className="flex gap-2 mb-2">
+          <Label>{`Slideshow Files (${slideshowFiles.length}/5)`}</Label>
+          <div className="flex gap-2 mb-2 pt-2">
             {slideshowFiles?.map((slide, index) => (
               <div
                 key={index}
                 className="flex flex-col items-center gap-1"
               >
-                <ImagePreview image={slide?.image} onRemove={() => removeSlideImage(index)} />
-                <Input error={!!errors.slideshowFiles?.[index]} type="text" value={slideshowFiles[index].caption} onChange={e => updateSlideImage(index, { caption: e.target.value, image: slide?.image })} />
+                <ImagePreview image={slide?.image} onClick={() => handleImagePreview(slide.image)} onRemove={() => removeSlideImage(index)} />
+                <Input {...register(`slideshowFiles.${index}.caption`, { required: true })} error={!!errors.slideshowFiles?.[index]?.caption} type="text" value={slideshowFiles[index].caption} onChange={e => updateSlideImage(index, { caption: e.target.value, image: slide?.image })} />
               </div>
             ))}
           </div>
           {slideshowFiles?.length < 5 && (
-            <FileInput accept="image/*" error={!!errors.slideshowFiles?.root} max={5} multiple onChange={handleChangeSlideImage} />
+            <FileInput accept="image/*" error={!!errors.slideshowFiles?.root} multiple onChange={handleChangeSlideImage} />
           )}
         </div>
       );
@@ -630,6 +650,19 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       )}
       {breatheInputsContent}
       <Button isLoading={isLoading} disabled={isLoading}>Submit</Button>
+      <Modal
+        isOpen={isOpen}
+        onClose={closeModal}
+        className="max-w-[600px] p-5 lg:p-10 flex justify-center items-center"
+      >
+        <Image
+          src={typeof previewImage === 'string' ? previewImage : previewImage ? URL.createObjectURL(previewImage) : ''}
+          alt={'Preview image'}
+          width={400}
+          height={400}
+          className={`size-50object-cover rounded-xl`}
+        />
+      </Modal>
     </form>
   )
 };
