@@ -8,6 +8,7 @@ interface ImagePreviewProps {
   image?: File | string | null;
   alt?: string;
   className?: string;
+  onClick?: () => void;
   onRemove?: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function ImagePreview({
   image,
   alt = "Image Preview",
   className = "",
+  onClick,
   onRemove,
 }: ImagePreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -41,8 +43,9 @@ export default function ImagePreview({
         src={previewUrl}
         alt={alt}
         width={80}
+        onClick={onClick}
         height={80}
-        className={`w-20 h-20 object-cover rounded-xl ${className}`}
+        className={`w-20 h-20 object-cover rounded-xl ${!!onClick && 'cursor-pointer'} ${className}`}
       />
     </div>
   );
