@@ -38,3 +38,27 @@ export const editExercise = async (id: string, data: Partial<Exercise>): Promise
 export const deleteExercise = async (id: string) => {
   await deleteDoc(doc(firestore, 'exercises', id))
 }
+
+export const addTag = async (name: string): Promise<void> => {
+  await addDoc(collection(firestore, "tags"), { name, createdAt: new Date() });
+}
+
+export const editTag = async (id: string, name: string): Promise<void> => {
+  const tagRef = doc(firestore, 'tags', id);
+  await updateDoc(tagRef, { name });
+}
+
+export const getTags = async (): Promise<{ id: string; name: string }[]> => {
+  const queryRef = query(collection(firestore, "tags"), orderBy('createdAt', 'desc'));
+  const res = await getDocs(queryRef);
+
+  if (res.empty) {
+    return [];
+  }
+
+  return res.docs.map(doc => ({ ...doc.data(), id: doc.id })) as { id: string; name: string }[];
+}
+
+export const deleteTag = async (id: string) => {
+  await deleteDoc(doc(firestore, 'tags', id))
+}

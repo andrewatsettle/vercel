@@ -1,3 +1,4 @@
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 import React, { ReactNode } from "react";
 
 interface ButtonProps {
@@ -9,6 +10,7 @@ interface ButtonProps {
   onClick?: () => void; // Click handler
   disabled?: boolean; // Disabled state
   className?: string; // Disabled state
+  isLoading?: boolean; // Loading state
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -20,6 +22,7 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className = "",
   disabled = false,
+  isLoading = false,
 }) => {
   // Size Classes
   const sizeClasses = {
@@ -37,16 +40,14 @@ const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={`inline-flex items-center justify-center font-medium gap-2 rounded-lg transition ${className} ${
-        sizeClasses[size]
-      } ${variantClasses[variant]} ${
-        disabled ? "cursor-not-allowed opacity-50" : ""
-      }`}
+      className={`inline-flex items-center justify-center font-medium gap-2 rounded-lg transition ${className} ${sizeClasses[size]
+        } ${variantClasses[variant]} ${disabled ? "cursor-not-allowed opacity-50" : ""
+        }`}
       onClick={onClick}
       disabled={disabled}
     >
       {startIcon && <span className="flex items-center">{startIcon}</span>}
-      {children}
+      {isLoading ? <LoadingSpinner /> : children}
       {endIcon && <span className="flex items-center">{endIcon}</span>}
     </button>
   );

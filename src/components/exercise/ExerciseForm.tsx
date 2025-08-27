@@ -11,7 +11,7 @@ import MultiSelect from "@/components/form/MultiSelect";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
-import { addExercise, editExercise } from "@/firebase/firestore";
+import { addExercise, editExercise, getTags } from "@/firebase/firestore";
 import { uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
@@ -35,7 +35,7 @@ type ExerciseInputs = {
   mediaType: string
   audioFile: File | string | null
   videoFile: File | string | null
-  slideshowFiles: { image?: File | string | null, caption?: string }[]
+  slideshowFiles: { id?: string; image?: File | string | null, caption?: string }[]
   breathe: {
     inhale: number | string
     hold: number | string
@@ -53,12 +53,6 @@ export const categories = [
   { value: "breathe", label: "Breathe" },
   { value: "move", label: "Move" },
 ];
-
-const tagList = [
-  { value: "quickResets", text: "Quick Resets", selected: false },
-  { value: "releaseTension", text: "Release Tension", selected: false },
-  { value: "vagusNerveActivation", text: "Vagus Nerve Activation", selected: false },
-]
 
 export const mediaTypes = [
   { value: "audio", label: "Audio" },
@@ -83,7 +77,7 @@ export interface ExerciseItem {
   }
   audioFile?: string | null
   videoFile?: string | null
-  slideshowFiles?: { image: string, caption: string }[]
+  slideshowFiles?: { id?: string; image: string, caption: string }[]
   visible: boolean
   breathe: {
     inhale: number | string
@@ -99,6 +93,7 @@ export interface ExerciseFormProps {
 export default function ExerciseForm({ data }: ExerciseFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [tagList, setTagList] = useState<{ value: string; text: string; selected: boolean }[]>([]);
 
   const {
     handleSubmit,
@@ -107,6 +102,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     control,
     register,
     formState: { errors },
+    setError,
   } = useForm<ExerciseInputs>({
     defaultValues: {
       visible: false,
@@ -204,6 +200,15 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
 
   useEffect(() => {
+    getTags().then(tags => {
+      const formattedTags = tags.map(tag => ({
+        value: tag.name,
+        text: tag.name,
+        selected: false,
+      }));
+      setTagList(formattedTags);
+    });
+
     if (data) {
       setValue('visible', data.visible);
       setValue('name', data.name);
@@ -268,6 +273,22 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         ...rest
       } = inputs;
 
+      if (slideshowFiles.length > 0) {
+        const invalidSlides: number[] = [];
+        slideshowFiles.forEach((slide, index) => {
+          if (slide.caption?.trim() === '') {
+            invalidSlides.push(index);
+          }
+        });
+        if (invalidSlides.length > 0) {
+          invalidSlides.forEach((index) => {
+            setError(`slideshowFiles.${index}.caption`, { type: 'manual', message: 'Caption is required' });
+          })
+          setIsLoading(false);
+          return;
+        }
+      }
+
       let uploadedImage: File | string | null = image;
       if (image && image instanceof File) {
         uploadedImage = await uploadFile(image as File);
@@ -308,7 +329,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
             const uploadedImage = await uploadFile(slide.image as File);
             return { image: uploadedImage, caption: slide.caption || '' };
           }
-          return { image: slide.image ?? '', caption: slide.caption ?? ''};
+          return { image: slide.image ?? '', caption: slide.caption ?? '' };
         }));
       }
 
@@ -457,11 +478,11 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           <div className="flex gap-2 mb-2">
             {slideshowFiles?.map((slide, index) => (
               <div
-                key={(typeof slide?.image === 'string' && slide?.image) || (slide?.image && slide?.image instanceof File && slide?.image?.name) || slide.caption}
+                key={index}
                 className="flex flex-col items-center gap-1"
               >
                 <ImagePreview image={slide?.image} onRemove={() => removeSlideImage(index)} />
-                <Input error={!!errors.slideshowFiles?.type} type="text" value={slideshowFiles[index].caption} onChange={e => updateSlideImage(index, { caption: e.target.value, image: slide?.image })} />
+                <Input error={!!errors.slideshowFiles?.[index]} type="text" value={slideshowFiles[index].caption} onChange={e => updateSlideImage(index, { caption: e.target.value, image: slide?.image })} />
               </div>
             ))}
           </div>
@@ -608,7 +629,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         </div>
       )}
       {breatheInputsContent}
-      <Button disabled={isLoading}>Submit</Button>
+      <Button isLoading={isLoading} disabled={isLoading}>Submit</Button>
     </form>
   )
 };
