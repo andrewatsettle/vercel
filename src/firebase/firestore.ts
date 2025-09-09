@@ -63,3 +63,27 @@ export const getTags = async (): Promise<{ id: string; name: string }[]> => {
 export const deleteTag = async (id: string) => {
   await deleteDoc(doc(firestore, 'tags', id))
 }
+
+export const addCategory = async (label: string): Promise<void> => {
+  await addDoc(collection(firestore, "categories"), { label, createdAt: new Date() });
+}
+
+export const editCategory = async (id: string, label: string): Promise<void> => {
+  const tagRef = doc(firestore, 'categories', id);
+  await updateDoc(tagRef, { label });
+}
+
+export const getCategories = async (): Promise<{ id: string; label: string }[]> => {
+  const queryRef = query(collection(firestore, "categories"), orderBy('createdAt', 'desc'));
+  const res = await getDocs(queryRef);
+
+  if (res.empty) {
+    return [];
+  }
+
+  return res.docs.map(doc => ({ ...doc.data(), id: doc.id })) as { id: string; label: string }[];
+}
+
+export const deleteCategory = async (id: string) => {
+  await deleteDoc(doc(firestore, 'categories', id))
+}

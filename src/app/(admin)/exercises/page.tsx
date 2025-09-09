@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteExercise, getExercises } from "@/firebase/firestore";
-import { categories, ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
+import { ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { deleteFolder } from "@/firebase/storage";
@@ -45,6 +45,15 @@ export default function Excercises() {
   const getLabel = (data: { label: string; value: string }[], value: string) => {
     const target = data.find(item => item.value === value);
     return target ? target.label : value;
+  }
+
+  const getUppercaseStr = (str: string) => {
+    if (str && str.length > 0) {
+      const strArr = str.split('');
+      strArr[0] = strArr[0].toUpperCase();
+      return strArr.join('');
+    }
+    return '';
   }
 
   useEffect(() => {
@@ -131,7 +140,7 @@ export default function Excercises() {
                 {item.summDescription}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                {getLabel(categories, item.category)}
+                {getUppercaseStr(item.category)}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                 {getLabel(mediaTypes, item.category === 'meditation' || item.category === 'move' ? item.mediaType : '')}
