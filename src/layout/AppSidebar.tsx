@@ -31,6 +31,10 @@ const navItems: NavItem[] = [
     name: 'Tags',
     path: '/tags',
   },
+  {
+    name: 'Categories',
+    path: '/categories'
+  }
   // {
   //   name: 'Form Elements',
   //   path: '/form-elements'

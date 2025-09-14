@@ -12,7 +12,7 @@ import MultiSelect from "@/components/form/MultiSelect";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
-import { addExercise, editExercise, getTags } from "@/firebase/firestore";
+import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
 import { uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
@@ -46,17 +46,12 @@ type ExerciseInputs = {
     hold: number | string
     exhale: number | string
   }
+  duration: number | string
 }
 
 export const imageTypes = [
   { value: "Single", label: "Single" },
   { value: "Multiple", label: "Multiple" },
-];
-
-export const categories = [
-  { value: "meditation", label: "Meditation" },
-  { value: "breathe", label: "Breathe" },
-  { value: "move", label: "Move" },
 ];
 
 export const mediaTypes = [
@@ -89,6 +84,7 @@ export interface ExerciseItem {
     hold: number | string
     exhale: number | string
   }
+  duration?: number | string
 }
 
 export interface ExerciseFormProps {
@@ -101,6 +97,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<File | string | null>(null);
   const [tagList, setTagList] = useState<{ value: string; text: string; selected: boolean }[]>([]);
+  const [categories, setCategories] = useState<{value: string; label: string}[]>([]);
 
   const {
     handleSubmit,
@@ -133,7 +130,8 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         exhale: '',
         hold: '',
         inhale: ''
-      }
+      },
+      duration: '',
     },
   });
 
@@ -215,6 +213,14 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setTagList(formattedTags);
     });
 
+    getCategories().then(categories => {
+      const formattedCategories = categories.map(category => ({
+        label: category.label,
+        value: category.label.toLowerCase(),
+      }));
+      setCategories(formattedCategories);
+    })
+
     if (data) {
       setValue('visible', data.visible);
       setValue('name', data.name);
@@ -224,6 +230,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setValue('tags', data.tags);
       setValue('mediaType', data.mediaType);
       setValue('imageType', data.imageType);
+      setValue('duration', data?.duration ?? '');
       if (data.image) {
         setValue('image', data.image);
       }
@@ -265,6 +272,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     videoFile,
     slideshowFiles,
     breathe,
+    duration,
   } = watch();
 
   const onSubmit: SubmitHandler<ExerciseInputs> = async (inputs) => {
@@ -626,6 +634,18 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
             Tags {tags.join(", ")}
           </p>
         </div>
+      </div>
+      <div>
+        <Label>{"Duration (min)"}</Label>
+        <Input error={!!errors.duration?.type} value={duration} onChange={e => {
+          const val = e.target.value;
+          const num = Number(val);
+          if (val === '') return setValue('breathe.inhale', '');
+          if (/^\d*\.?\d*$/.test(val)) {
+            const validNum = num < 0 ? 0 : num > 100 ? 100 : num;
+            setValue('duration', validNum);
+          }
+        }} />
       </div>
       {isMultimediaTypeAvailable && (
         <div className="flex flex-col gap-2">
