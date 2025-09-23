@@ -146,16 +146,16 @@ export default function Excercises() {
                 {getLabel(mediaTypes, item.category === 'meditation' || item.category === 'move' ? item.mediaType : '')}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
-                0
+                {item?.stats?.views ?? 0}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
-                0
+                {item?.stats?.starts ?? 0}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
-                0
+                {item?.stats?.completions ?? 0}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400 text-center">
-                0
+                {item?.stats?.favorites ?? 0}
               </TableCell>
               <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                 <Button onClick={() => onEdit(item?.id as string)}>Edit</Button>

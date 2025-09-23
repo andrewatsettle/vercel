@@ -85,6 +85,12 @@ export interface ExerciseItem {
     exhale: number | string
   }
   duration?: number | string
+  stats: {
+    views: number
+    completions: number
+    favorites: number
+    starts: number
+  }
 }
 
 export interface ExerciseFormProps {
@@ -371,6 +377,12 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           slideshowFiles: uploadedSlides,
           multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
+          stats: {
+            completions: 0,
+            starts: 0,
+            favorites: 0,
+            views: 0,
+          }
         });
       }
 
