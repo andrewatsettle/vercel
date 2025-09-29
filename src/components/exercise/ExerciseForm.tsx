@@ -144,7 +144,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   register('visible');
   register('name', { required: true });
   register('summDescription', { required: true });
-  register('fullDescription', { required: true });
+  register('fullDescription', { required: false });
   register('imageType', { required: true });
   register('image', {
     validate: {
@@ -231,7 +231,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setValue('visible', data.visible);
       setValue('name', data.name);
       setValue('summDescription', data.summDescription);
-      setValue('fullDescription', data.fullDescription);
+      setValue('fullDescription', data?.fullDescription ?? '');
       setValue('category', data.category);
       setValue('tags', data.tags);
       setValue('mediaType', data.mediaType);
