@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy, setDoc } from "firebase/firestore";
+import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
 import { firestore } from "./firebase";
 import { ExerciseItem } from "@/components/exercise/ExerciseForm";
 
