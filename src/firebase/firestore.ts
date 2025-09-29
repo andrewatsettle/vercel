@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
+import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy, setDoc } from "firebase/firestore";
 import { firestore } from "./firebase";
 import { ExerciseItem } from "@/components/exercise/ExerciseForm";
 
@@ -86,4 +86,40 @@ export const getCategories = async (): Promise<{ id: string; label: string }[]> 
 
 export const deleteCategory = async (id: string) => {
   await deleteDoc(doc(firestore, 'categories', id))
+}
+
+type StatisticsItem = {
+  completions: number
+  favorites: number
+  starts: number
+  views: number
+  id?: string;
+}
+
+//statistics
+export const addStats = async (id: string, data: StatisticsItem): Promise<void> => {
+  const statsRef = doc(firestore, 'statistics', id);
+  await setDoc(statsRef, {...data, createdAt: new Date()});
+}
+
+export const getStats = async (): Promise<StatisticsItem[]> => {
+  const queryRef = query(collection(firestore, "statistics"), orderBy('createdAt', 'desc'));
+  const res = await getDocs(queryRef);
+
+  if (res.empty) {
+    return [];
+  }
+
+  return res.docs.map(doc => ({...doc.data(), id: doc.id})) as StatisticsItem[];
+}
+
+export const getStatsById = async (id: string): Promise<StatisticsItem | null> => {
+  const statsRef = doc(firestore, 'statistics', id);
+  const statsSnap = await getDoc(statsRef);
+
+  if (!statsSnap.exists()) {
+    return null;
+  }
+
+  return { ...statsSnap.data(), id: statsSnap.id } as StatisticsItem;
 }

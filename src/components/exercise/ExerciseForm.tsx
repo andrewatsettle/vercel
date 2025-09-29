@@ -12,7 +12,7 @@ import MultiSelect from "@/components/form/MultiSelect";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
-import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
+import { addExercise, addStats, editExercise, getCategories, getTags } from "@/firebase/firestore";
 import { uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
@@ -85,13 +85,19 @@ export interface ExerciseItem {
     exhale: number | string
   }
   duration?: number | string
+}
+
+export interface WithStats {
   stats: {
-    views: number
     completions: number
     favorites: number
     starts: number
-  }
+    views: number
+    id?: string;
+  } | null
 }
+
+export type ExerciseItemWithStats = ExerciseItem & WithStats;
 
 export interface ExerciseFormProps {
   data?: ExerciseItem;
@@ -103,7 +109,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<File | string | null>(null);
   const [tagList, setTagList] = useState<{ value: string; text: string; selected: boolean }[]>([]);
-  const [categories, setCategories] = useState<{value: string; label: string}[]>([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const {
     handleSubmit,
@@ -314,6 +320,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       if (exerciseId === undefined) {
         const docRef = await addDoc(collection(firestore, 'exercises'), {});
         exerciseId = docRef.id;
+        await addStats(exerciseId, { id: exerciseId, completions: 0, favorites: 0, starts: 0, views: 0 });
       }
 
       let uploadedImage: File | string | null = image;
@@ -377,12 +384,6 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           slideshowFiles: uploadedSlides,
           multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
-          stats: {
-            completions: 0,
-            starts: 0,
-            favorites: 0,
-            views: 0,
-          }
         });
       }
 

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 import Button from "@/components/ui/button/Button";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { deleteExercise, getExercises } from "@/firebase/firestore";
-import { ExerciseItem, mediaTypes } from "@/components/exercise/ExerciseForm";
+import { deleteExercise, getExercises, getStats } from "@/firebase/firestore";
+import { ExerciseItemWithStats, mediaTypes } from "@/components/exercise/ExerciseForm";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { deleteFolder } from "@/firebase/storage";
@@ -15,12 +15,31 @@ export default function Excercises() {
   const router = useRouter();
   const { isOpen, openModal, closeModal } = useModal();
 
-  const [data, setData] = useState<ExerciseItem[]>([]);
+  const [data, setData] = useState<ExerciseItemWithStats[]>([]);
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
 
   const fetchExercises = async () => {
-    const exercises = await getExercises();
-    setData(exercises);
+    const [exercises, stats] = await Promise.all([getExercises(), getStats()]);
+
+    const exercisesWithStats = exercises.map(exercise => {
+      const targetStats = stats.find((stat) => stat.id === exercise.id);
+      if (targetStats) {
+        return {
+          ...exercise,
+          stats: targetStats
+        }
+      }
+      return {
+        ...exercise,
+        stats: {
+          views: 0,
+          starts: 0,
+          completions: 0,
+          favorites: 0,
+        }
+      }
+    });
+    setData(exercisesWithStats);
   }
 
   const onEdit = async (id: string) => {
