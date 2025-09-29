@@ -97,13 +97,8 @@ type StatisticsItem = {
 }
 
 //statistics
-export const addStats = async (id: string, data: StatisticsItem): Promise<void> => {
-  const statsRef = doc(firestore, 'statistics', id);
-  await setDoc(statsRef, {...data, createdAt: new Date()});
-}
-
 export const getStats = async (): Promise<StatisticsItem[]> => {
-  const queryRef = query(collection(firestore, "statistics"), orderBy('createdAt', 'desc'));
+  const queryRef = query(collection(firestore, "statistics"));
   const res = await getDocs(queryRef);
 
   if (res.empty) {
@@ -111,15 +106,4 @@ export const getStats = async (): Promise<StatisticsItem[]> => {
   }
 
   return res.docs.map(doc => ({...doc.data(), id: doc.id})) as StatisticsItem[];
-}
-
-export const getStatsById = async (id: string): Promise<StatisticsItem | null> => {
-  const statsRef = doc(firestore, 'statistics', id);
-  const statsSnap = await getDoc(statsRef);
-
-  if (!statsSnap.exists()) {
-    return null;
-  }
-
-  return { ...statsSnap.data(), id: statsSnap.id } as StatisticsItem;
 }

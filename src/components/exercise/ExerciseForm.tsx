@@ -12,7 +12,7 @@ import MultiSelect from "@/components/form/MultiSelect";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
-import { addExercise, addStats, editExercise, getCategories, getTags } from "@/firebase/firestore";
+import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
 import { uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
@@ -320,7 +320,6 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       if (exerciseId === undefined) {
         const docRef = await addDoc(collection(firestore, 'exercises'), {});
         exerciseId = docRef.id;
-        await addStats(exerciseId, { id: exerciseId, completions: 0, favorites: 0, starts: 0, views: 0 });
       }
 
       let uploadedImage: File | string | null = image;
