@@ -13,7 +13,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
 import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
-import { uploadFile } from "@/firebase/storage";
+import { deleteFileByUrl, uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
 import VideoPreview from "./VideoPreview";
@@ -303,6 +303,29 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     duration,
   } = watch();
 
+  const removePreviousFile = async (fileUrl?: string | File | null) => {
+    if (fileUrl && typeof fileUrl === 'string') {
+      await deleteFileByUrl(fileUrl);
+    }
+  }
+
+  const removeMediaTypeFiles = async () => {
+    await removePreviousFile(data?.audioFile);
+    await removePreviousFile(data?.video?.url);
+    if (data?.slideshowFiles) {
+      await Promise.all(data?.slideshowFiles?.map(slide => removePreviousFile(slide.image)))
+    }
+  }
+
+  const removeMainImages = async () => {
+    await removePreviousFile(data?.image);
+    if (data?.multipleImages) {
+      await removePreviousFile(data?.multipleImages?.vertical);
+      await removePreviousFile(data?.multipleImages?.horizontal);
+      await removePreviousFile(data?.multipleImages?.fullscreen);
+    }
+  }
+
   const onSubmit: SubmitHandler<ExerciseInputs> = async (inputs) => {
     try {
       setIsLoading(true);
@@ -341,6 +364,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       let uploadedImage: File | string | null = image;
       if (image && image instanceof File) {
         uploadedImage = await uploadFile(exerciseId, image as File);
+        await removeMainImages();
       }
 
       const uploadedMultipleImages = {
@@ -359,11 +383,13 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
       if (fullscreen instanceof File && imageType === 'Multiple') {
         uploadedMultipleImages.fullscreen = await uploadFile(exerciseId, fullscreen as File)
+        await removeMainImages();
       }
 
       let uploadedAudio: File | string | null = audioFile;
       if (audioFile instanceof File && mediaType === 'audio') {
         uploadedAudio = await uploadFile(exerciseId, audioFile as File);
+        await removeMediaTypeFiles();
       }
 
       let uploadedVideo: File | string | null = video?.url ?? null;
@@ -371,6 +397,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
       if (video?.url instanceof File && mediaType === 'video') {
         uploadedVideo = await uploadFile(exerciseId, video.url as File);
+        await removeMediaTypeFiles();
       }
       if (videoMetadata === null && video?.url instanceof File && mediaType === 'video') {
         videoMetadata = await getVideoMetadata(video.url as File) as VideoMetadata;
@@ -385,6 +412,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           }
           return { image: slide.image ?? '', caption: slide.caption ?? '' };
         }));
+        await removeMediaTypeFiles();
       }
 
       if (data?.id) {
@@ -436,7 +464,6 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           type: file.type,
           name: file.name
         };
-        console.log('video', video);
 
         resolve(videoMetadata);
       };
