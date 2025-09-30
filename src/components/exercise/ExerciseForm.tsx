@@ -13,7 +13,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
 import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
-import { uploadFile } from "@/firebase/storage";
+import { deleteFileByUrl, uploadFile } from "@/firebase/storage";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
 import VideoPreview from "./VideoPreview";
@@ -39,7 +39,10 @@ type ExerciseInputs = {
   tags: string[]
   mediaType: string
   audioFile: File | string | null
-  videoFile: File | string | null
+  video: {
+    url: File | string | null;
+    metadata?: VideoMetadata;
+  } | null;
   slideshowFiles: { id?: string; image?: File | string | null, caption?: string }[]
   breathe: {
     inhale: number | string
@@ -60,6 +63,16 @@ export const mediaTypes = [
   { value: "slideshow", label: "Slideshow" },
 ];
 
+interface VideoMetadata {
+  duration: number;
+  width: number;
+  height: number;
+  aspectRatio: number;
+  size: number;
+  type: string;
+  name: string;
+}
+
 export interface ExerciseItem {
   id?: string
   name: string
@@ -76,7 +89,10 @@ export interface ExerciseItem {
     fullscreen: string | null
   }
   audioFile: string | null
-  videoFile: string | null
+  video: {
+    url: string;
+    metadata?: VideoMetadata
+  } | null;
   slideshowFiles?: { id?: string; image: string, caption: string }[]
   visible: boolean
   breathe: {
@@ -85,13 +101,19 @@ export interface ExerciseItem {
     exhale: number | string
   }
   duration?: number | string
+}
+
+export interface WithStats {
   stats: {
-    views: number
     completions: number
     favorites: number
     starts: number
-  }
+    views: number
+    id?: string;
+  } | null
 }
+
+export type ExerciseItemWithStats = ExerciseItem & WithStats;
 
 export interface ExerciseFormProps {
   data?: ExerciseItem;
@@ -103,7 +125,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<File | string | null>(null);
   const [tagList, setTagList] = useState<{ value: string; text: string; selected: boolean }[]>([]);
-  const [categories, setCategories] = useState<{value: string; label: string}[]>([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const {
     handleSubmit,
@@ -130,7 +152,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       tags: [],
       mediaType: '',
       audioFile: null,
-      videoFile: null,
+      video: null,
       slideshowFiles: [],
       breathe: {
         exhale: '',
@@ -144,7 +166,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   register('visible');
   register('name', { required: true });
   register('summDescription', { required: true });
-  register('fullDescription', { required: true });
+  register('fullDescription', { required: false });
   register('imageType', { required: true });
   register('image', {
     validate: {
@@ -159,17 +181,17 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   });
   register('audioFile', {
     validate: {
-      required: () => mediaType !== 'audio' ? true : mediaType === 'audio' && audioFile !== null
+      required: () => mediaType !== 'audio' || category === 'breathe' ? true : mediaType === 'audio' && audioFile !== null
     }
   });
-  register('videoFile', {
+  register('video', {
     validate: {
-      required: () => mediaType !== 'video' ? true : mediaType === 'video' && videoFile !== null,
+      required: () => mediaType !== 'video' || category === 'breathe' ? true : mediaType === 'video' && !!video?.url,
     }
   });
   register('slideshowFiles', {
     validate: {
-      required: () => mediaType !== 'slideshow' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
+      required: () => mediaType !== 'slideshow' || category === 'breathe' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
     }
   });
   register('multipleImages.horizontal', {
@@ -231,7 +253,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setValue('visible', data.visible);
       setValue('name', data.name);
       setValue('summDescription', data.summDescription);
-      setValue('fullDescription', data.fullDescription);
+      setValue('fullDescription', data?.fullDescription ?? '');
       setValue('category', data.category);
       setValue('tags', data.tags);
       setValue('mediaType', data.mediaType);
@@ -250,8 +272,8 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       if (data.audioFile) {
         setValue('audioFile', data.audioFile);
       }
-      if (data.videoFile) {
-        setValue('videoFile', data.videoFile);
+      if (data.video?.url) {
+        setValue('video', data.video);
       }
       if (data.slideshowFiles) {
         setValue('slideshowFiles', data.slideshowFiles);
@@ -275,11 +297,34 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     multipleImages,
     mediaType,
     audioFile,
-    videoFile,
+    video,
     slideshowFiles,
     breathe,
     duration,
   } = watch();
+
+  const removePreviousFile = async (fileUrl?: string | File | null) => {
+    if (fileUrl && typeof fileUrl === 'string') {
+      await deleteFileByUrl(fileUrl);
+    }
+  }
+
+  const removeMediaTypeFiles = async () => {
+    await removePreviousFile(data?.audioFile);
+    await removePreviousFile(data?.video?.url);
+    if (data?.slideshowFiles) {
+      await Promise.all(data?.slideshowFiles?.map(slide => removePreviousFile(slide.image)))
+    }
+  }
+
+  const removeMainImages = async () => {
+    await removePreviousFile(data?.image);
+    if (data?.multipleImages) {
+      await removePreviousFile(data?.multipleImages?.vertical);
+      await removePreviousFile(data?.multipleImages?.horizontal);
+      await removePreviousFile(data?.multipleImages?.fullscreen);
+    }
+  }
 
   const onSubmit: SubmitHandler<ExerciseInputs> = async (inputs) => {
     try {
@@ -287,7 +332,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       const {
         image,
         audioFile,
-        videoFile,
+        video,
         slideshowFiles,
         multipleImages: { vertical, fullscreen, horizontal },
         ...rest
@@ -319,6 +364,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       let uploadedImage: File | string | null = image;
       if (image && image instanceof File) {
         uploadedImage = await uploadFile(exerciseId, image as File);
+        await removeMainImages();
       }
 
       const uploadedMultipleImages = {
@@ -337,16 +383,24 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
       if (fullscreen instanceof File && imageType === 'Multiple') {
         uploadedMultipleImages.fullscreen = await uploadFile(exerciseId, fullscreen as File)
+        await removeMainImages();
       }
 
       let uploadedAudio: File | string | null = audioFile;
       if (audioFile instanceof File && mediaType === 'audio') {
         uploadedAudio = await uploadFile(exerciseId, audioFile as File);
+        await removeMediaTypeFiles();
       }
 
-      let uploadedVideo: File | string | null = videoFile;
-      if (videoFile instanceof File && mediaType === 'video') {
-        uploadedVideo = await uploadFile(exerciseId, videoFile as File);
+      let uploadedVideo: File | string | null = video?.url ?? null;
+      let videoMetadata: VideoMetadata | null = video?.metadata ?? null;
+
+      if (video?.url instanceof File && mediaType === 'video') {
+        uploadedVideo = await uploadFile(exerciseId, video.url as File);
+        await removeMediaTypeFiles();
+      }
+      if (videoMetadata === null && video?.url instanceof File && mediaType === 'video') {
+        videoMetadata = await getVideoMetadata(video.url as File) as VideoMetadata;
       }
 
       let uploadedSlides: { image: string, caption: string }[] = [];
@@ -358,13 +412,17 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           }
           return { image: slide.image ?? '', caption: slide.caption ?? '' };
         }));
+        await removeMediaTypeFiles();
       }
 
       if (data?.id) {
         await editExercise(data.id, {
           image: uploadedImage as string,
           audioFile: uploadedAudio as string,
-          videoFile: uploadedVideo as string,
+          video: {
+            url: uploadedVideo as string,
+            metadata: videoMetadata as NonNullable<ExerciseItem['video']>['metadata'],
+          },
           slideshowFiles: uploadedSlides,
           multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
@@ -373,16 +431,13 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         await addExercise(exerciseId, {
           image: uploadedImage as string,
           audioFile: uploadedAudio as string,
-          videoFile: uploadedVideo as string,
+          video: {
+            url: uploadedVideo as string,
+            metadata: videoMetadata as NonNullable<ExerciseItem['video']>['metadata'],
+          },
           slideshowFiles: uploadedSlides,
           multipleImages: uploadedMultipleImages as ExerciseItem['multipleImages'],
           ...rest,
-          stats: {
-            completions: 0,
-            starts: 0,
-            favorites: 0,
-            views: 0,
-          }
         });
       }
 
@@ -391,6 +446,36 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       setIsLoading(false);
     }
   };
+
+  function getVideoMetadata(file: File): Promise<NonNullable<ExerciseItem['video']>['metadata'] | undefined> {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+
+      video.onloadedmetadata = function () {
+        window.URL.revokeObjectURL(video.src);
+
+        const videoMetadata = {
+          duration: video.duration,
+          width: video.videoWidth,
+          height: video.videoHeight,
+          aspectRatio: video.videoWidth / video.videoHeight,
+          size: file.size,
+          type: file.type,
+          name: file.name
+        };
+
+        resolve(videoMetadata);
+      };
+
+      video.onerror = function () {
+        window.URL.revokeObjectURL(video.src);
+        reject(new Error('Failed to load video metadata'));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -403,6 +488,15 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     const file = event.target.files?.[0];
     if (file) {
       setValue(key, file);
+    }
+  };
+
+  const handleChangeVideo = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setValue('video', {
+        url: file
+      });
     }
   };
 
@@ -503,9 +597,9 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       return (
         <div>
           <Label>Video File</Label>
-          <VideoPreview video={videoFile} onRemove={() => setValue('videoFile', null)} />
-          {!videoFile && (
-            <FileInput error={!!errors.videoFile?.type} accept="video/*" onChange={handleChangeFile('videoFile')} />
+          <VideoPreview video={video?.url} onRemove={() => setValue('video', null)} />
+          {!video && (
+            <FileInput error={!!errors.video?.type} accept="video/*" onChange={handleChangeVideo} />
           )}
         </div>
       );
@@ -535,7 +629,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, audioFile, videoFile, slideshowFiles, errors.audioFile, errors.videoFile, errors.slideshowFiles]);
+  }, [mediaType, audioFile, video, slideshowFiles, errors.audioFile, errors.video, errors.slideshowFiles]);
 
   const breatheInputsContent = useMemo(() => {
     if (category === 'breathe') {

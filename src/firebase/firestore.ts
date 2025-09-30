@@ -87,3 +87,23 @@ export const getCategories = async (): Promise<{ id: string; label: string }[]> 
 export const deleteCategory = async (id: string) => {
   await deleteDoc(doc(firestore, 'categories', id))
 }
+
+type StatisticsItem = {
+  completions: number
+  favorites: number
+  starts: number
+  views: number
+  id?: string;
+}
+
+//statistics
+export const getStats = async (): Promise<StatisticsItem[]> => {
+  const queryRef = query(collection(firestore, "statistics"));
+  const res = await getDocs(queryRef);
+
+  if (res.empty) {
+    return [];
+  }
+
+  return res.docs.map(doc => ({...doc.data(), id: doc.id})) as StatisticsItem[];
+}
