@@ -9,6 +9,7 @@ import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import { checkFirebasePermissionError } from "@/firebase/errorHandler";
 
 export interface TagItem {
   id?: string;
@@ -27,28 +28,40 @@ export default function Tags() {
   const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
 
   const fetchTags = async () => {
-    const tags = await getTags();
-    setData(tags);
+    try {
+      const tags = await getTags();
+      setData(tags);
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
+    }
   }
 
   const onEditConfirm = async () => {
-    if (editId && editInput.length > 0) {
-      setIsLoadingEdit(true);
-      await editTag(editId, editInput);
-      await fetchTags();
-      setEditId(null);
-      setEditInput('');
-      setIsLoadingEdit(false);
+    try {
+      if (editId && editInput.length > 0) {
+        setIsLoadingEdit(true);
+        await editTag(editId, editInput);
+        await fetchTags();
+        setEditId(null);
+        setEditInput('');
+        setIsLoadingEdit(false);
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 
   const handleAddTag = async () => {
-    if (tagInput.trim().length > 0) {
-      setIsLoadingAdd(true);
-      await addTag(tagInput);
-      await fetchTags();
-      setTagInput('');
-      setIsLoadingAdd(false);
+    try {
+      if (tagInput.trim().length > 0) {
+        setIsLoadingAdd(true);
+        await addTag(tagInput);
+        await fetchTags();
+        setTagInput('');
+        setIsLoadingAdd(false);
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 
@@ -63,11 +76,15 @@ export default function Tags() {
   }
 
   const confirmDelete = async () => {
-    if (deleteTagId) {
-      await deleteTag(deleteTagId);
-      await fetchTags();
-      setDeleteTagId(null);
-      closeModal();
+    try {
+      if (deleteTagId) {
+        await deleteTag(deleteTagId);
+        await fetchTags();
+        setDeleteTagId(null);
+        closeModal();
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 

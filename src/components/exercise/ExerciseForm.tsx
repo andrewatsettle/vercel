@@ -12,15 +12,14 @@ import MultiSelect from "@/components/form/MultiSelect";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import { ChevronDownIcon } from "@/icons";
-import { addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
+import { useModal } from "@/hooks/useModal";
+import { addEmptyExercise, addExercise, editExercise, getCategories, getTags } from "@/firebase/firestore";
 import { deleteFileByUrl, uploadFile } from "@/firebase/storage";
+import { checkFirebasePermissionError } from "@/firebase/errorHandler";
 import ImagePreview from "./ImagePreview";
 import AudioPreview from "./AudioPreview";
 import VideoPreview from "./VideoPreview";
 import Checkbox from "../form/input/Checkbox";
-import { addDoc, collection } from "firebase/firestore";
-import { firestore } from "@/firebase/firebase";
-import { useModal } from "@/hooks/useModal";
 import { Modal } from "../ui/modal";
 
 type ExerciseInputs = {
@@ -239,7 +238,9 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         selected: false,
       }));
       setTagList(formattedTags);
-    });
+    }).catch(error => {
+      checkFirebasePermissionError(error)
+    })
 
     getCategories().then(categories => {
       const formattedCategories = categories.map(category => ({
@@ -357,8 +358,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       let exerciseId = data?.id;
 
       if (exerciseId === undefined) {
-        const docRef = await addDoc(collection(firestore, 'exercises'), {});
-        exerciseId = docRef.id;
+        exerciseId = await addEmptyExercise()
       }
 
       let uploadedImage: File | string | null = image;
@@ -442,7 +442,10 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       }
 
       router.replace('/exercises');
-    } finally {
+    } catch (error) {
+      checkFirebasePermissionError(error as Error);
+    }
+    finally {
       setIsLoading(false);
     }
   };

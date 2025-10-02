@@ -10,6 +10,7 @@ import { ExerciseItemWithStats, mediaTypes } from "@/components/exercise/Exercis
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { deleteFolder } from "@/firebase/storage";
+import { checkFirebasePermissionError } from "@/firebase/errorHandler";
 
 export default function Excercises() {
   const router = useRouter();
@@ -19,27 +20,31 @@ export default function Excercises() {
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
 
   const fetchExercises = async () => {
-    const [exercises, stats] = await Promise.all([getExercises(), getStats()]);
+    try {
+      const [exercises, stats] = await Promise.all([getExercises(), getStats()]);
 
-    const exercisesWithStats = exercises.map(exercise => {
-      const targetStats = stats.find((stat) => stat.id === exercise.id);
-      if (targetStats) {
+      const exercisesWithStats = exercises.map(exercise => {
+        const targetStats = stats.find((stat) => stat.id === exercise.id);
+        if (targetStats) {
+          return {
+            ...exercise,
+            stats: targetStats
+          }
+        }
         return {
           ...exercise,
-          stats: targetStats
+          stats: {
+            views: 0,
+            starts: 0,
+            completions: 0,
+            favorites: 0,
+          }
         }
-      }
-      return {
-        ...exercise,
-        stats: {
-          views: 0,
-          starts: 0,
-          completions: 0,
-          favorites: 0,
-        }
-      }
-    });
-    setData(exercisesWithStats);
+      });
+      setData(exercisesWithStats);
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
+    }
   }
 
   const onEdit = async (id: string) => {

@@ -1,12 +1,16 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 import Button from "@/components/ui/button/Button";
 import { auth } from "@/firebase/firebase";
-import { signOut } from "firebase/auth";
 
 const AppHeader: React.FC = () => {
-  const handleLogout = () => {
-    signOut(auth)
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth)
+    router.replace('/signin');
   }
 
   return (
