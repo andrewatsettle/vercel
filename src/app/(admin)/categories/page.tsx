@@ -9,6 +9,7 @@ import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import { checkFirebasePermissionError } from "@/firebase/errorHandler";
 
 export interface CategoryItem {
   id?: string;
@@ -27,28 +28,40 @@ export default function Categories() {
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
 
   const fetchCategories = async () => {
-    const categories = await getCategories();
-    setData(categories);
+    try {
+      const categories = await getCategories();
+      setData(categories);
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
+    }
   }
 
   const onEditConfirm = async () => {
-    if (editId && editInput.length > 0) {
-      setIsLoadingEdit(true);
-      await editCategory(editId, editInput);
-      await fetchCategories();
-      setEditId(null);
-      setEditInput('');
-      setIsLoadingEdit(false);
+    try {
+      if (editId && editInput.length > 0) {
+        setIsLoadingEdit(true);
+        await editCategory(editId, editInput);
+        await fetchCategories();
+        setEditId(null);
+        setEditInput('');
+        setIsLoadingEdit(false);
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 
   const handleAddCategory = async () => {
-    if (categoryInput.trim().length > 0) {
-      setIsLoadingAdd(true);
-      await addCategory(categoryInput);
-      await fetchCategories();
-      setCategoryInput('');
-      setIsLoadingAdd(false);
+    try {
+      if (categoryInput.trim().length > 0) {
+        setIsLoadingAdd(true);
+        await addCategory(categoryInput);
+        await fetchCategories();
+        setCategoryInput('');
+        setIsLoadingAdd(false);
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 
@@ -63,11 +76,15 @@ export default function Categories() {
   }
 
   const confirmDelete = async () => {
-    if (deleteCategoryId) {
-      await deleteCategory(deleteCategoryId);
-      await fetchCategories();
-      setDeleteCategoryId(null);
-      closeModal();
+    try {
+      if (deleteCategoryId) {
+        await deleteCategory(deleteCategoryId);
+        await fetchCategories();
+        setDeleteCategoryId(null);
+        closeModal();
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
     }
   }
 

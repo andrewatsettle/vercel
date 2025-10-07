@@ -23,16 +23,12 @@ export default function RootLayout({
   const pathname = usePathname()
 
   useEffect(() => {
-    if (pathname !== '/signin' && auth.currentUser === null) {
-      console.log('User not authenticated, redirecting to /signin');
-      router.replace('/signin');
-    };
-
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/');
+        if (pathname === '/signin' || pathname === '/signup') {
+          router.replace('/');
+        }
       } else {
-        console.log('User not authenticated, redirecting to /signin');
         router.replace('/signin');
       }
     });
@@ -40,7 +36,7 @@ export default function RootLayout({
     return () => {
       unsub();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
