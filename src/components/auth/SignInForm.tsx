@@ -32,10 +32,7 @@ export default function SignInForm() {
 
   const onSubmit: SubmitHandler<Inputs> = ({ email, password }) => {
     signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log("User signed in:", user);
-      })
+      .then(() => {})
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;

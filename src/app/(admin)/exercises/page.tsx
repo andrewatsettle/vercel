@@ -4,13 +4,30 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Button from "@/components/ui/button/Button";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { deleteExercise, getExercises, getStats } from "@/firebase/firestore";
-import { ExerciseItemWithStats, mediaTypes } from "@/components/exercise/ExerciseForm";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  deleteExercise,
+  getExercises,
+  getFirstExercise,
+  getStats,
+  updateFirstExercise,
+} from "@/firebase/firestore";
+import {
+  ExerciseItemWithStats,
+  mediaTypes,
+} from "@/components/exercise/ExerciseForm";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { deleteFolder } from "@/firebase/storage";
 import { checkFirebasePermissionError } from "@/firebase/errorHandler";
+import Label from "@/components/form/Label";
+import Select from "@/components/form/Select";
 
 export default function Excercises() {
   const router = useRouter();
@@ -18,6 +35,8 @@ export default function Excercises() {
 
   const [data, setData] = useState<ExerciseItemWithStats[]>([]);
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
+  const [selectedFirstExercise, setSelectedFirstExercise] = useState<string | null>(null);
+  const [loadingSelected, setLoadingSelected] = useState(false);
 
   const fetchExercises = async () => {
     try {
@@ -44,6 +63,34 @@ export default function Excercises() {
       setData(exercisesWithStats);
     } catch (error) {
       checkFirebasePermissionError(error as Error)
+    }
+  }
+
+  const fetchFirstExercise = async () => {
+    try {
+      const firstExercise = await getFirstExercise();
+
+      setSelectedFirstExercise(firstExercise?.id || null);
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
+    }
+  }
+
+  const handleChangeFirstExercise = async () => {
+    try {
+      setLoadingSelected(true);
+      const targetExercise = data.find(item => item.id === selectedFirstExercise) || null;
+
+      if (targetExercise) {
+        await updateFirstExercise({
+          id: targetExercise.id as string,
+          label: targetExercise.name,
+        })
+      }
+    } catch (error) {
+      checkFirebasePermissionError(error as Error)
+    } finally {
+      setLoadingSelected(false);
     }
   }
 
@@ -82,11 +129,28 @@ export default function Excercises() {
 
   useEffect(() => {
     fetchExercises();
+    fetchFirstExercise();
   }, [])
 
   return (
     <div className="">
       <h2 className="text-2xl mb-6">Exercises</h2>
+
+      <Label>First exercise</Label>
+      <div className="flex mb-6 gap-4 items-center">
+        <Select
+          options={data.map(item => ({ value: item.id ?? '', label: item.name }))}
+          value={selectedFirstExercise || ''}
+          placeholder="Select first exercise"
+          onChange={(id) => {
+            setSelectedFirstExercise(id)
+          }}
+          className="dark:bg-dark-900"
+        />
+        <Button disabled={loadingSelected} onClick={handleChangeFirstExercise}>Select</Button>
+      </div>
+
+      <Label>Exercises list</Label>
       <Table className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         {/* Table Header */}
         <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">

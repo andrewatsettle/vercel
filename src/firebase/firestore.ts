@@ -1,6 +1,17 @@
-import { addDoc, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
-import { firestore } from "./firebase";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc, 
+  getDoc,
+  query,
+  orderBy, 
+  setDoc,
+  } from "firebase/firestore";
 import { ExerciseItem } from "@/components/exercise/ExerciseForm";
+import { firestore } from "./firebase";
 
 type Exercise = ExerciseItem;
 
@@ -168,6 +179,31 @@ export const getStats = async (): Promise<StatisticsItem[]> => {
     }
   
     return res.docs.map(doc => ({...doc.data(), id: doc.id})) as StatisticsItem[];
+  } catch (error) {
+    throw error;
+  }
+}
+
+export type FirstExerciseSelect = {
+  id: string;
+  label: string;
+}
+
+export const getFirstExercise = async (): Promise<FirstExerciseSelect | null> => {
+  try {
+    const queryDoc = doc(firestore, 'generalSettings', 'firstExercise');
+    const res = await getDoc(queryDoc);
+
+    return res.data() as FirstExerciseSelect ?? null;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export const updateFirstExercise = async (data: FirstExerciseSelect): Promise<void> => {
+  try {
+    const queryDoc = doc(firestore, 'generalSettings', 'firstExercise');
+    await setDoc(queryDoc, data);
   } catch (error) {
     throw error;
   }
