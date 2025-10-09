@@ -15,6 +15,7 @@ type Inputs = {
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   // const [isChecked, setIsChecked] = useState(false);
 
   const {
@@ -31,13 +32,17 @@ export default function SignInForm() {
   const [email, password] = watch(['email', 'password'])
 
   const onSubmit: SubmitHandler<Inputs> = ({ email, password }) => {
+    setIsLoading(true);
     signInWithEmailAndPassword(auth, email, password)
-      .then(() => {})
+      .then(() => { })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
         console.error("Error signing in:", errorCode, errorMessage);
-      });
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
   };
 
   return (
@@ -99,7 +104,7 @@ export default function SignInForm() {
                   </Link>
                 </div> */}
                 <div>
-                  <Button className="w-full" size="sm">
+                  <Button disabled={isLoading} className="w-full" size="sm">
                     Log in
                   </Button>
                 </div>
