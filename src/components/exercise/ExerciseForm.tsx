@@ -24,6 +24,7 @@ import { Modal } from "../ui/modal";
 
 type ExerciseInputs = {
   visible: boolean
+  onlyForPremium: boolean
   name: string
   summDescription: string
   fullDescription: string
@@ -94,6 +95,7 @@ export interface ExerciseItem {
   } | null;
   slideshowFiles?: { id?: string; image: string, caption: string }[]
   visible: boolean
+  onlyForPremium: boolean
   breathe: {
     inhale: number | string
     hold: number | string
@@ -137,6 +139,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   } = useForm<ExerciseInputs>({
     defaultValues: {
       visible: false,
+      onlyForPremium: false,
       name: '',
       summDescription: '',
       fullDescription: '',
@@ -163,6 +166,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   });
 
   register('visible');
+  register('onlyForPremium');
   register('name', { required: true });
   register('summDescription', { required: true });
   register('fullDescription', { required: false });
@@ -252,6 +256,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
     if (data) {
       setValue('visible', data.visible);
+      setValue('onlyForPremium', data?.onlyForPremium ?? false);
       setValue('name', data.name);
       setValue('summDescription', data.summDescription);
       setValue('fullDescription', data?.fullDescription ?? '');
@@ -288,6 +293,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
 
   const {
     visible,
+    onlyForPremium,
     name,
     summDescription,
     fullDescription,
@@ -684,6 +690,10 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       <div className="flex flex-row items-center gap-2">
         <Label className="mb-0">Active</Label>
         <Checkbox checked={visible} onChange={(checked) => setValue('visible', checked)} />
+      </div>
+      <div className="flex flex-row items-center gap-2">
+        <Label className="mb-0">Only For Premium</Label>
+        <Checkbox checked={onlyForPremium} onChange={(checked) => setValue('onlyForPremium', checked)} />
       </div>
       <div>
         <Label>Name</Label>
