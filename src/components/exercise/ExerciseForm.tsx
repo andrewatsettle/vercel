@@ -544,7 +544,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           <Label>Image</Label>
           <ImagePreview image={image} onClick={() => handleImagePreview(image)} onRemove={() => setValue('image', null)} />
           {!image && (
-            <FileInput error={!!errors.image?.type} accept="image/png, image/jpeg" onChange={handleImageChange} />
+            <FileInput error={!!errors.image?.type} accept="image/png, image/jpeg, image/webp" onChange={handleImageChange} />
           )}
         </div>
       );
@@ -556,21 +556,21 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
           <Label>Vertical</Label>
           <ImagePreview image={multipleImages.vertical} onClick={() => handleImagePreview(multipleImages.vertical)} onRemove={() => setValue('multipleImages.vertical', null)} />
           {!multipleImages.vertical && (
-            <FileInput error={!!errors.multipleImages?.vertical?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('vertical')} />
+            <FileInput error={!!errors.multipleImages?.vertical?.type} accept="image/png, image/jpeg, image/webp" onChange={handleMultipleImageChange('vertical')} />
           )}
         </div>
         <div>
           <Label>Horizontal</Label>
           <ImagePreview image={multipleImages.horizontal} onClick={() => handleImagePreview(multipleImages.horizontal)} onRemove={() => setValue('multipleImages.horizontal', null)} />
           {!multipleImages.horizontal && (
-            <FileInput error={!!errors.multipleImages?.horizontal?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('horizontal')} />
+            <FileInput error={!!errors.multipleImages?.horizontal?.type} accept="image/png, image/jpeg, image/webp" onChange={handleMultipleImageChange('horizontal')} />
           )}
         </div>
         <div>
           <Label>Full Screen</Label>
           <ImagePreview image={multipleImages.fullscreen} onClick={() => handleImagePreview(multipleImages.fullscreen)} onRemove={() => setValue('multipleImages.fullscreen', null)} />
           {!multipleImages.fullscreen && (
-            <FileInput error={!!errors.multipleImages?.fullscreen?.type} accept="image/png, image/jpeg" onChange={handleMultipleImageChange('fullscreen')} />
+            <FileInput error={!!errors.multipleImages?.fullscreen?.type} accept="image/png, image/jpeg, image/webp" onChange={handleMultipleImageChange('fullscreen')} />
           )}
         </div>
       </div>
