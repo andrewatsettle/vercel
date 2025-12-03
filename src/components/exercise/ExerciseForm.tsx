@@ -46,8 +46,9 @@ type ExerciseInputs = {
   slideshowFiles: { id?: string; image?: File | string | null, caption?: string }[]
   breathe: {
     inhale: number | string
-    hold: number | string
+    hold?: number | string
     exhale: number | string
+    holdEnd?: number | string
   }
   duration: number | string
 }
@@ -61,6 +62,7 @@ export const mediaTypes = [
   { value: "audio", label: "Audio" },
   { value: "video", label: "Video" },
   { value: "slideshow", label: "Slideshow" },
+  { value: "inhale/exhale", label: "Inhale/Exhale" },
 ];
 
 interface VideoMetadata {
@@ -98,8 +100,9 @@ export interface ExerciseItem {
   onlyForPremium: boolean
   breathe: {
     inhale: number | string
-    hold: number | string
+    hold?: number | string
     exhale: number | string
+    holdEnd?: number | string
   }
   duration?: number | string
 }
@@ -159,7 +162,8 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       breathe: {
         exhale: '',
         hold: '',
-        inhale: ''
+        inhale: '',
+        holdEnd: '',
       },
       duration: '',
     },
@@ -217,11 +221,8 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
       required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.inhale,
     }
   })
-  register('breathe.hold', {
-    validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.hold,
-    }
-  })
+  register('breathe.hold', { required: false })
+  register('breathe.holdEnd', { required: false })
   register('breathe.exhale', {
     validate: {
       required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.exhale,
@@ -409,6 +410,10 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
         videoMetadata = await getVideoMetadata(video.url as File) as VideoMetadata;
       }
 
+      if (mediaType === 'inhale/exhale') {
+        await removeMediaTypeFiles();
+      }
+
       let uploadedSlides: { image: string, caption: string }[] = [];
       if (slideshowFiles && mediaType === 'slideshow') {
         uploadedSlides = await Promise.all(slideshowFiles.map(async (slide) => {
@@ -534,7 +539,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   }
 
   const isMultimediaTypeAvailable = useMemo(() => {
-    return category === 'meditation' || category === 'move';
+    return category === 'meditation' || category === 'move' || category === 'breathe';
   }, [category]);
 
   const imageUploadContent = useMemo(() => {
@@ -679,11 +684,34 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
             }
           }} />
         </div>
+        <div>
+          <Label>Hold</Label>
+          <Input error={!!errors.breathe?.holdEnd?.type} value={breathe.holdEnd} onChange={e => {
+            const val = e.target.value;
+            const num = Number(val);
+            if (val === '') return setValue('breathe.holdEnd', '');
+            if (/^\d*\.?\d*$/.test(val)) {
+              const validNum = num < 0 ? 0 : num > 100 ? 100 : num;
+              setValue('breathe.holdEnd', validNum);
+            }
+          }} />
+        </div>
       </div>
     }
     return null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, breathe.inhale, breathe.hold, breathe.exhale, errors.breathe, errors.breathe?.inhale, errors.breathe?.hold, errors.breathe?.exhale]);
+  }, [
+    category,
+    breathe.inhale,
+    breathe.hold,
+    breathe.exhale,
+    breathe.holdEnd,
+    errors.breathe,
+    errors.breathe?.inhale,
+    errors.breathe?.hold,
+    errors.breathe?.exhale,
+    errors.breathe?.holdEnd,
+  ]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-1/3 gap-4">
