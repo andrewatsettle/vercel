@@ -188,17 +188,17 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   });
   register('audioFile', {
     validate: {
-      required: () => mediaType !== 'audio' || category === 'breathe' ? true : mediaType === 'audio' && audioFile !== null
+      required: () => mediaType !== 'audio' ? true : mediaType === 'audio' && audioFile !== null
     }
   });
   register('video', {
     validate: {
-      required: () => mediaType !== 'video' || category === 'breathe' ? true : mediaType === 'video' && !!video?.url,
+      required: () => mediaType !== 'video' ? true : mediaType === 'video' && !!video?.url,
     }
   });
   register('slideshowFiles', {
     validate: {
-      required: () => mediaType !== 'slideshow' || category === 'breathe' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
+      required: () => mediaType !== 'slideshow' ? true : mediaType === 'slideshow' && slideshowFiles.length > 0,
     }
   });
   register('multipleImages.horizontal', {
@@ -218,14 +218,14 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   })
   register('breathe.inhale', {
     validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.inhale,
+      required: () => (category !== 'breathe' || mediaType !== 'inhale/exhale') ? true : category === 'breathe' && !!breathe?.inhale,
     }
   })
   register('breathe.hold', { required: false })
   register('breathe.holdEnd', { required: false })
   register('breathe.exhale', {
     validate: {
-      required: () => category !== 'breathe' ? true : category === 'breathe' && !!breathe?.exhale,
+      required: () => (category !== 'breathe' || mediaType !== 'inhale/exhale') ? true : category === 'breathe' && !!breathe?.exhale,
     }
   })
 
@@ -646,7 +646,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
   }, [mediaType, audioFile, video, slideshowFiles, errors.audioFile, errors.video, errors.slideshowFiles]);
 
   const breatheInputsContent = useMemo(() => {
-    if (category === 'breathe') {
+    if (category === 'breathe' && mediaType === 'inhale/exhale') {
       return <div className="flex flex-col gap-2">
         <div>
           <Label>Inhale</Label>
@@ -702,6 +702,7 @@ export default function ExerciseForm({ data }: ExerciseFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     category,
+    mediaType,
     breathe.inhale,
     breathe.hold,
     breathe.exhale,
